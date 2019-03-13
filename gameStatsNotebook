@@ -1,0 +1,79 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r Load libs}
+library(readxl)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+df <- read_excel("~/Recieve Doc_STF01.xlsx", 
+    sheet = "Sheet1")
+
+#Compare the next rotation to the current to see if there was a sideout
+#Create a lead component to bring up the next row to the current and compare rotation #s
+df$lag <- shift(df$Rotation, 1L, type = "lead")
+
+#Create the sideout column
+df$sideout <- as.numeric(ifelse(
+  df$lag == df$Rotation,
+  "0",
+  "1"
+))
+
+```
+
+```{r group}
+summary <- group_by(df, Opponent, Game, `Hitter Number`)
+summary1 <- group_by(df, Opponent, Game)
+rotation <- group_by(df, Opponent, Game, Rotation)
+
+# sideout
+# sideoutsummary
+# rotationsummary
+```
+```{r Summarise the df}
+#Create hitting stats
+stats <- summarize(summary, totalKills = sum(Outcome), attempts = n(), 
+                   hitting = round(sum(Outcome)/ n(), digits = 3))
+
+#Create sideout stats
+sideout <- summarize(summary1, sideout = round(sum(sideout)/n()))
+
+#Create sideout % by game
+sideoutsummary <- summary1 %>%
+  filter(sideout >= 0) %>%
+  summarize(sideout = round(sum(sideout)/n(), digits = 3))
+
+#Create sideout % by game and rotation
+rotationsummary <- rotation %>%
+  filter(sideout >= 0) %>%
+  summarize(sideout = round(sum(sideout)/n(), digits = 3))
+
+```
+
+
+```{r Plot}
+ggplot(stats, aes(Game, hitting, fill = `Hitter Number`)) +
+  geom_bar(stat="identity", position = "dodge") + 
+  scale_fill_brewer(palette = "Set1") +
+  ggtitle("Sideout Hitting Percentage")
+
+ggplot(stats, aes(Game, attempts, fill = `Hitter Number`)) +
+  geom_bar(stat="identity", position = "dodge") + 
+  scale_fill_brewer(palette = "Set1") +
+  ggtitle("Sideout Hitting Attempts")
+
+ggplot(rotationsummary, aes(Game, sideout, fill = as.factor(`Rotation`))) +
+  geom_bar(stat="identity", position = "dodge") + 
+  # geom_line(data = sidepercent, colour = "blue") + #Create a line showing the 50% mark for sideouts
+  scale_fill_brewer(palette = "Set1") +
+  ggtitle("Sideout by Rotation") +
+  scale_fill_discrete(name = "Rotation")
+    
+#sidepercent <- data.frame(Game = c("1","2","3"), sideout = c(0.5,0.5,0.5))
+```
+
