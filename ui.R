@@ -13,22 +13,12 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 
-# Define UI for application that draws a histogram
-shinyUI(fluidPage(
-  
-  # Application title
-  titlePanel("Saint Francis Sideout Stats"),
-  
-  # Sidebar with a slider input for number of bins 
-  sidebarLayout(
-    sidebarPanel(
-      helpText("Display the stats for Saint Francis on Sideout.")
-    ),
-    
-    # Show a plot of the generated distribution
-    mainPanel(
-       plotOutput("distPlot")
-       ,plotOutput("distPlot1")
-    )
-  )
-))
+
+ui = navbarPage("Saint Francis",
+                tabPanel("Sideout",
+                         plotOutput("distPlot"),
+                         plotOutput("distPlot1")
+                         ),
+                tabPanel("Rotation Sideout", plotOutput("distPlot2"))
+)
+
