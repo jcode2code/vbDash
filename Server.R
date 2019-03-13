@@ -15,6 +15,8 @@ library(ggplot2)
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
+  
+  output$df <- 
    
   output$distPlot <- renderPlot({
     
@@ -29,6 +31,7 @@ shinyServer(function(input, output) {
    
     summary <- group_by(df, Opponent, Game, `Hitter Number`)
     summary1 <- group_by(df, Opponent, Game)
+    rotation <- group_by(df, Opponent, Game, Rotation)
     
     stats <- summarize(summary, totalKills = sum(Outcome), attempts = n(), 
                        hitting = round(sum(Outcome)/ n(), digits = 3))
@@ -36,6 +39,10 @@ shinyServer(function(input, output) {
     
     
     sideoutsummary <- summary1 %>%
+      filter(sideout >= 0) %>%
+      summarize(sideout = round(sum(sideout)/n(), digits = 3))
+    
+    rotationsummary <- rotation %>%
       filter(sideout >= 0) %>%
       summarize(sideout = round(sum(sideout)/n(), digits = 3))
     
@@ -54,4 +61,14 @@ shinyServer(function(input, output) {
       ggtitle("Sideout Hitting Attempts")
   
 })
+  output$distPlot2 <- renderPlot({
+    
+    ggplot(rotationsummary, aes(Game, sideout, fill = as.factor(`Rotation`))) +
+      geom_bar(stat="identity", position = "dodge") + 
+      scale_fill_brewer(palette = "Set1") +
+      ggtitle("Sideout by Rotation") +
+      scale_fill_discrete(name = "Rotation")
+  })
+  
+  
 })
