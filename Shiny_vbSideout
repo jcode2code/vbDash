@@ -1,0 +1,88 @@
+library(shiny)
+library(dplyr)
+library(ggplot2)
+
+runApp(list(
+  ui = fluidPage(
+    titlePanel("Rotation Sideouts"),
+    
+    sidebarLayout(
+      sidebarPanel(
+        textInput("text1", "Rotation", ""),
+        textInput("text2", "Hitter", ""),
+        textInput("text3", "Outcome", ""),
+        actionButton("update", "Update Table"),
+        actionButton("save", "Save Data"),
+        textOutput("saveMsg")
+    ),
+    
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Sideout", tableOutput("table1")),
+        tabPanel("Stats", tableOutput("table2")),
+        tabPanel("Graph", plotOutput("graph1"))
+    
+  )
+  ))),
+  
+
+  server = function(input, output, session) {
+    values <- reactiveValues()
+    values$df <- data.frame(rotation = character(), 
+                            hitter = character(), 
+                            outcome = character(),
+                            stringsAsFactors = FALSE)
+    
+    newEntry <- observeEvent(input$update, {
+      values$df <- rbind(values$df,
+                         data.frame(stringsAsFactors = FALSE,
+                                    rotation = (input$text1),
+                                    hitter = (input$text2),
+                                    outcome = as.numeric(input$text3)
+                                                             )
+      )
+    })
+    
+    aggregated <- reactive({
+      values$df %>%
+        group_by(rotation,hitter) %>%
+        summarize(Sets = n(), 
+                  Hitting_Percent = (sum(outcome)/n()))
+    })
+
+    output$table1 <- renderTable({
+      values$df
+    })
+    
+    output$table2 <- renderTable({
+      aggregated()
+    })
+    
+    output$graph1 <- renderPlot({
+      ggplot(aggregated(), aes(x=rotation, y=Sets, fill=hitter))+geom_bar(stat="identity", position = "dodge")+scale_fill_brewer(palette = "Set1") +ggtitle("Sideout Hitting Attempts")
+    })
+    
+    outputDir <- "U:/RStudio/vbSideoutShiny"
+    
+    #Save Data to the local drive
+    saveData <- function(data){
+      data <- t(values$df)
+      fileName <- sprintf("%s_%s.csv", as.integer(Sys.time()), digest::digest(data))
+      write.csv(x = values$df, file = file.path(outputDir, fileName),
+                row.names = FALSE, quote = TRUE, col.names = TRUE)
+      print("saved")
+      output$saveMsg <- renderText({
+        paste("Saved at ",as.character(Sys.time()))
+      })
+      }
+    
+    #Looks for the click on the save button and cals the saveData function
+    callSaveData <- observeEvent(input$save, {
+      saveData()
+    })
+    
+  
+
+  }#close server
+)) #close list, close runapp
+
